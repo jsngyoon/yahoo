@@ -9,7 +9,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 
-BACK = 30  # How many days we go back to set start day for output
+#BACK = 30  # How many days we go back to set start day for output
+BACK = len(pd.bdate_range('2020-3-15', datetime.now()))
 WKS = 52*2
 
 
@@ -84,4 +85,16 @@ client = gspread.authorize(creds)
 sheet = client.open('Corona').sheet1
 #sheet.update_cell(1, 1, 'test')
 set_with_dataframe(sheet, df[-1*BACK:], include_index=True)
-
+df['DAL'][-1*BACK:].plot()
+df['GOOGL'][-1*BACK:].plot()
+df['AAPL'][-1*BACK:].plot()
+df['T'][-1*BACK:].plot()
+df['MO'][-1*BACK:].plot()
+df['BRK_B'][-1*BACK:].plot()
+df['O'][-1*BACK:].plot()
+df['SPG'][-1*BACK:].plot()
+df['VZ'][-1*BACK:].plot()
+df['EMB'][-1*BACK:].plot()
+df['IDV'][-1*BACK:].plot()
+df['GSPC'][-1*BACK:].plot()
+plt.show()
