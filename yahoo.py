@@ -30,13 +30,28 @@ for name, symb in zip(names, symbs):
     calc_52wkratio(globals()[name])
     df[name] = globals()[name]['52wkRatio']
 
-writer = ExcelWriter('corona.xlsx')
-df[-1*BACK:].to_excel(writer, '52wkRatio')
+df = df[-1*BACK:]
+dfs = df.copy()
+idx = list(dfs.index)
+for i in idx:
+    s = dfs.loc[i]
+    s = s.sort_values(ascending=False)
+    idy = list(s.index)
+    k=0
+    for j in idy:
+        k = k+1
+        dfs.loc[i,j] = k
+
+df = pd.concat([df, dfs], axis=1)
+writer = ExcelWriter('corona.xlsx', datetime_format='mmm dd')
+df.to_excel(writer, '52wkRatio')
 writer.save()
 
+df['DATE'] = df.index.date
+df.set_index('DATE', drop=True, inplace=True)
 scope = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
 creds = ServiceAccountCredentials.from_json_keyfile_name('Yahoo-3018bb168e80.json', scope)
 client = gspread.authorize(creds)
 sheet = client.open('Corona').sheet1
-set_with_dataframe(sheet, df[-1*BACK:], include_index=True)
+set_with_dataframe(sheet, df, include_index=True)
 
