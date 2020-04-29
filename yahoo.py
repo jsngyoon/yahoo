@@ -45,7 +45,33 @@ for i in idx:
 df = pd.concat([df, dfs], axis=1)
 writer = ExcelWriter('corona.xlsx', datetime_format='mmm dd')
 df.to_excel(writer, '52wkRatio')
-writer.save()
+
+workbook = writer.book
+worksheet = writer.sheets['52wkRatio']
+
+chart = workbook.add_chart({'type': 'line'})
+# bold = workbook.add_format({'bold': 1})
+# Configure second series. Note use of alternative syntax to define ranges.
+for i in range(len(names)):
+    chart.add_series({
+        'name':       ['52wkRatio', 0, i+1],
+        'categories': ['52wkRatio', 1, 0, BACK, 0],
+        'values':     ['52wkRatio', 1, i+1, BACK, i+1],
+    })
+
+# Add a chart title and some axis labels.
+chart.set_title ({'name': '52wkRatio History'})
+chart.set_x_axis({'name': 'Date'})
+chart.set_y_axis({'name': '52wkRatio(%)'})
+
+# Set an Excel chart style. Colors with white outline and shadow.
+chart.set_style(10)
+
+# Insert the chart into the worksheet (with an offset).
+worksheet.insert_chart('C3', chart, {'x_offset': 25, 'y_offset': 10})
+
+workbook.close()
+#writer.save()
 
 df['DATE'] = df.index.date
 df.set_index('DATE', drop=True, inplace=True)
