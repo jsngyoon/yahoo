@@ -3,7 +3,7 @@ import pandas_datareader as pdr
 from datetime import datetime, timedelta
 # from matplotlib import pyplot as plt
 from pandas import ExcelWriter
-# import pygsheets
+import pygsheets
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
@@ -79,5 +79,13 @@ scope = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_name('Yahoo-3018bb168e80.json', scope)
 client = gspread.authorize(creds)
 sheet = client.open('Corona').sheet1
+sheet.clear()
 set_with_dataframe(sheet, df, include_index=True)
+
+gc = pygsheets.authorize(service_file='Yahoo-3018bb168e80.json')
+sheet = gc.open('Corona').sheet1
+data = []
+for i in range(len(names)):
+    data.append(((1,i+2), (BACK,i+2)))
+chart = pygsheets.Chart(sheet, ((1,1), (BACK,1)), ranges=data, chart_type=pygsheets.ChartType.LINE, title='52wkRatio History',anchor_cell='B2')
 
