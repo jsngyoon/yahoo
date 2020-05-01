@@ -1,12 +1,9 @@
+from datetime import datetime, timedelta
 import pandas as pd
 import pandas_datareader as pdr
-from datetime import datetime, timedelta
+import pygsheets
 # from matplotlib import pyplot as plt
 from pandas import ExcelWriter
-import pygsheets
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
 # BACK = 30  # How many days we go back to set start day for output
 BACK = len(pd.bdate_range('2020-3-15', datetime.now()))
@@ -58,6 +55,24 @@ def add_chart(workbook, worksheet, key):
     worksheet.insert_chart('C3', chart, {'x_offset': 25, 'y_offset': 10})
 
 
+def make_xlsx(writer, workbook, df, title):
+    df = concat_sorted_df(df[-1*BACK:])
+    df.to_excel(writer, title)
+    add_chart(workbook,  writer.sheets[title], title)
+    return df
+
+
+def upload_gsheets(sh, df, title, ranges):
+    df['DATE'] = df.index.date
+    df.set_index('DATE', drop=True, inplace=True)
+    sh.del_worksheet(sh[0])
+    worksheet = sh.add_worksheet(title=title, rows=2*BACK, cols=3*len(names))
+    #worksheet = sh[0]
+    #print(worksheet.title, worksheet.id)
+    worksheet.set_dataframe(df, 'A1', copy_index=True)
+    pygsheets.Chart(worksheet, ((1,1), (BACK+1,1)), ranges=ranges, chart_type=pygsheets.ChartType.LINE, title=title + ' History', anchor_cell='B2')
+
+
 # start = datetime(2019,1,1)
 end = datetime.now()
 start = end - timedelta(weeks=WKS)
@@ -69,41 +84,29 @@ for name, symb in zip(names, symbs):
     df[name] = globals()[name]['52wkRatio']
     df1[name] = globals()[name]['52wkHighChg']
 
-df = concat_sorted_df(df[-1*BACK:])
-df1 = concat_sorted_df(df1[-1*BACK:])
-
 writer = ExcelWriter('corona.xlsx', datetime_format='mmm dd')
-df.to_excel(writer, '52wkRatio')
-df1.to_excel(writer, '52wkHighChg')
-
 workbook = writer.book
-add_chart(workbook,  writer.sheets['52wkRatio'], '52wkRatio')
-add_chart(workbook,  writer.sheets['52wkHighChg'], '52wkHighChg')
+df = make_xlsx(writer, workbook, df, '52wkRatio')
+df1 = make_xlsx(writer, workbook, df1, '52wkHighChg')
 workbook.close()
-#writer.save()
 
-df['DATE'] = df.index.date
-df.set_index('DATE', drop=True, inplace=True)
-df1['DATE'] = df1.index.date
-df1.set_index('DATE', drop=True, inplace=True)
+gc = pygsheets.authorize(service_file='Yahoo-3018bb168e80.json')
+drange = []
+for i in range(len(names)):
+    drange.append(((1,i+2), (BACK+1,i+2)))
+sh = gc.open('Corona')
+upload_gsheets(sh, df, '52wkRatio', drange)
+upload_gsheets(sh, df1, '52wkHighChg', drange)
+
+"""
 scope = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
 creds = ServiceAccountCredentials.from_json_keyfile_name('Yahoo-3018bb168e80.json', scope)
 client = gspread.authorize(creds)
 sh = client.open('Corona')
-sh.del_worksheet(sh.get_worksheet(1))
-sh.del_worksheet(sh.get_worksheet(1))
-worksheet = sh.add_worksheet(title='52wkRatio', rows=str(2*BACK), cols=str(3*len(name)))
+sh.del_worksheet(sh.get_worksheet(0))
+worksheet = sh.add_worksheet(title='52wkRatio', rows=str(2*BACK), cols=str(3*len(names)))
 set_with_dataframe(worksheet, df, include_index=True)
-worksheet = sh.add_worksheet(title='52wkHighChg', rows=str(2*BACK), cols=str(3*len(name)))
+sh.del_worksheet(sh.get_worksheet(0))
+worksheet = sh.add_worksheet(title='52wkHighChg', rows=str(2*BACK), cols=str(3*len(names)))
 set_with_dataframe(worksheet, df1, include_index=True)
-
-gc = pygsheets.authorize(service_file='Yahoo-3018bb168e80.json')
-data = []
-for i in range(len(names)):
-    data.append(((1,i+2), (BACK,i+2)))
-sh = gc.open('Corona')
-worksheet = sh[1]
-chart = pygsheets.Chart(worksheet, ((1,1), (BACK,1)), ranges=data, chart_type=pygsheets.ChartType.LINE, title='52wkRatio History',anchor_cell='B2')
-worksheet = sh[2]
-chart = pygsheets.Chart(worksheet, ((1,1), (BACK,1)), ranges=data, chart_type=pygsheets.ChartType.LINE, title='52wkHighChg History',anchor_cell='B2')
-
+"""
