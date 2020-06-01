@@ -8,8 +8,8 @@ from pandas import ExcelWriter
 # BACK = 30  # How many days we go back to set start day for output
 BACK = len(pd.bdate_range('2020-3-15', datetime.now()))
 WKS = 52*2
-names = ['DAL', 'GOOGL', 'AAPL', 'T', 'MO', 'BRK_B', 'O', 'SPG', 'VZ', 'EMB', 'IDV', 'GSPC']
-symbs = ['DAL', 'GOOGL', 'AAPL', 'T', 'MO', 'BRK-B', 'O', 'SPG', 'VZ', 'EMB', 'IDV', '^GSPC']
+#names = ['DAL', 'GOOGL', 'AAPL', 'T', 'MO', 'BRK_B', 'O', 'SPG', 'VZ', 'EMB', 'IDV', 'GSPC']
+#symbs = ['DAL', 'GOOGL', 'AAPL', 'T', 'MO', 'BRK-B', 'O', 'SPG', 'VZ', 'EMB', 'IDV', '^GSPC']
 
 
 def calc_52wkratio(df):
@@ -33,7 +33,7 @@ def concat_sorted_df(df):
     return pd.concat([df, dfs], axis=1)
 
 
-def add_chart(workbook, worksheet, key):
+def add_chart(workbook, worksheet, key, names):
     chart = workbook.add_chart({'type': 'line'})
     # bold = workbook.add_format({'bold': 1})
     for i in range(len(names)):
@@ -55,14 +55,14 @@ def add_chart(workbook, worksheet, key):
     worksheet.insert_chart('C3', chart, {'x_offset': 25, 'y_offset': 10})
 
 
-def make_xlsx(writer, workbook, df, title):
+def make_xlsx(writer, workbook, df, title, names):
     df = concat_sorted_df(df[-1*BACK:])
     df.to_excel(writer, title)
-    add_chart(workbook,  writer.sheets[title], title)
+    add_chart(workbook,  writer.sheets[title], title, names)
     return df
 
 
-def upload_gsheets(sh, df, title, ranges):
+def upload_gsheets(sh, df, title, ranges, names):
     df['DATE'] = df.index.date
     df.set_index('DATE', drop=True, inplace=True)
     sh.del_worksheet(sh[0])
@@ -73,30 +73,31 @@ def upload_gsheets(sh, df, title, ranges):
     pygsheets.Chart(worksheet, ((1,1), (BACK+1,1)), ranges=ranges, chart_type=pygsheets.ChartType.LINE, title=title + ' History', anchor_cell='B2')
 
 
-# start = datetime(2019,1,1)
-end = datetime.now()
-start = end - timedelta(weeks=WKS)
-df = pd.DataFrame()
-df1 = pd.DataFrame()
-for name, symb in zip(names, symbs):
-    globals()[name] = pdr.get_data_yahoo(symb, start, end)
-    calc_52wkratio(globals()[name])
-    df[name] = globals()[name]['52wkRatio']
-    df1[name] = globals()[name]['52wkHighChg']
+def main(names, symbs, xlsx_file, gc_file, get_data_func=pdr.get_data_yahoo):
+    df = pd.DataFrame()
+    df1 = pd.DataFrame()
+    end = datetime.now()
+    start = end - timedelta(weeks=WKS)
+    for name, symb in zip(names, symbs):
+        globals()[name] = get_data_func(symb, start, end)
+        calc_52wkratio(globals()[name])
+        df[name] = globals()[name]['52wkRatio']
+        df1[name] = globals()[name]['52wkHighChg']
+#    func(df, df1, names, symbs)
 
-writer = ExcelWriter('corona.xlsx', datetime_format='mmm dd')
-workbook = writer.book
-df = make_xlsx(writer, workbook, df, '52wkRatio')
-df1 = make_xlsx(writer, workbook, df1, '52wkHighChg')
-workbook.close()
+    writer = ExcelWriter(xlsx_file, datetime_format='mmm dd')
+    workbook = writer.book
+    df = make_xlsx(writer, workbook, df, '52wkRatio', names)
+    df1 = make_xlsx(writer, workbook, df1, '52wkHighChg', names)
+    workbook.close()
 
-gc = pygsheets.authorize(service_file='Yahoo-3018bb168e80.json')
-drange = []
-for i in range(len(names)):
-    drange.append(((1,i+2), (BACK+1,i+2)))
-sh = gc.open('Corona')
-upload_gsheets(sh, df, '52wkRatio', drange)
-upload_gsheets(sh, df1, '52wkHighChg', drange)
+    gc = pygsheets.authorize(service_file='Yahoo-3018bb168e80.json')
+    drange = []
+    for i in range(len(names)):
+        drange.append(((1,i+2), (BACK+1,i+2)))
+    sh = gc.open(gc_file)
+    upload_gsheets(sh, df, '52wkRatio', drange, names)
+    upload_gsheets(sh, df1, '52wkHighChg', drange, names)
 
 """
 scope = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']

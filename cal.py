@@ -14,11 +14,14 @@ def make_cal_df(year, month):
     wkd = [0] * monthrange[1]
     hh = [11] * monthrange[1]
     mm = [0] * monthrange[1]
+    count = 0
     for i in day:
         if cal.weekday(year, month, i) > 4:
             wkd[i-1] = 1
             hh[i-1] = 0
+            count = count + 1
     df = pd.DataFrame(zip(wkd, day, hh, mm), columns=['Wkd', 'Day', 'HH', 'MM'])
+    df.loc[monthrange[1], 'Day'] = monthrange[1] - count
     return df
 
 
