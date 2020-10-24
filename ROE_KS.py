@@ -54,11 +54,11 @@ def get_table(symb):
     return table, price
 
 
-names = ['SEC', 'CJ', 'KOREIT', 'LGChem', '쌍용양회', 'CACAO', 'NAVER', 'SAMBA']
-symbs = ['005930', '097950', '034830', '051910', '003410', '035720', '035420', '207940']
+names = ['SEC', 'CJ', 'KOREIT', 'LGChem', '쌍용양회', 'CACAO', 'NAVER', 'SAMBA', 'KAIT']
+symbs = ['005930', '097950', '034830', '051910', '003410', '035720', '035420', '207940', '123890']
 
 
-Item = ['Price', 'Date', 'BPS', 'ROE(%)', 'Value after 10yr', '수익률(%)', '', '15% Buy Price', '10% Buy Price', '5% Buy Price']
+Item = ['Price', 'Date', 'BPS', 'ROE(%)', 'Value after 10yr', '연 수익률(%)', '', '15% Buy Price', '10% Buy Price', '5% Buy Price']
 mult15 = math.pow(1.15, 10)
 mult10 = math.pow(1.1, 10)
 mult5 = math.pow(1.05, 10)
